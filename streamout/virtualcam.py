@@ -109,6 +109,16 @@ class VirtualCamOutput(BaseOutput):
             self._audio_queue.put(frame.tobytes())
             self.parent.notify(eventpoint)
 
+    def flush(self) -> None:
+        """清空虚拟摄像头音频队列 — 打断时立即停止播放"""
+        if self._audio_queue:
+            import queue
+            while not self._audio_queue.empty():
+                try:
+                    self._audio_queue.get_nowait()
+                except queue.Empty:
+                    break
+
     def stop(self) -> None:
         if self._quit_event:
             self._quit_event.set()

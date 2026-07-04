@@ -30,8 +30,11 @@
 </div>
 <button id="start" onclick="start()">Start</button>
 <button id="stop" style="display: none" onclick="stop()">Stop</button>
+<button id="btn_interrupt" style="display: none; background: #e74c3c; color: white; font-size: 18px; padding: 12px 24px;"
+        onclick="interrupt()">⏹ 打断说话</button>
 <button class="btn btn-primary" id="btn_start_record">Start Recording</button>
 <button class="btn btn-primary" id="btn_stop_record" disabled>Stop Recording</button>
+<div id="speaking_status" style="display: none; color: #27ae60; margin: 4px 0;">● 正在说话中...</div>
 <!-- <button class="btn btn-primary" id="btn_download">Download Video</button> -->
 <input type="hidden" id="sessionid" value="0">
 <form class="form-inline" id="echo-form">

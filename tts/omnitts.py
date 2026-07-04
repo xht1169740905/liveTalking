@@ -158,6 +158,9 @@ class OmniTTS(BaseTTS):
         last_stream = np.array([], dtype=np.float32)
 
         for chunk in audio_stream:
+            if self.is_cancelled():
+                logger.info("OmniTTS cancelled during streaming")
+                return
             if not chunk or len(chunk) == 0:
                 continue
 
@@ -179,6 +182,9 @@ class OmniTTS(BaseTTS):
             total = stream.shape[0]
             idx = 0
             while total - idx >= self.chunk and self.state == State.RUNNING:
+                if self.is_cancelled():
+                    logger.info("OmniTTS cancelled during chunking")
+                    return
                 eventpoint = {}
                 if first:
                     eventpoint = {"status": "start", "text": text}
@@ -191,9 +197,10 @@ class OmniTTS(BaseTTS):
 
             last_stream = stream[idx:]  # remainder for next chunk
 
-        # ── send end-of-stream marker ──
-        eventpoint = {"status": "end", "text": text}
-        eventpoint.update(**textevent)
-        self.parent.put_audio_frame(
-            np.zeros(self.chunk, dtype=np.float32), eventpoint
-        )
+        if not self.is_cancelled():
+            # ── send end-of-stream marker ──
+            eventpoint = {"status": "end", "text": text}
+            eventpoint.update(**textevent)
+            self.parent.put_audio_frame(
+                np.zeros(self.chunk, dtype=np.float32), eventpoint
+            )

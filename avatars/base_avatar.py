@@ -182,11 +182,26 @@ class BaseAvatar:
         return stream
 
     def flush_talk(self):
+        """打断当前说话：从 TTS 源头到输出末端的全管线冲洗"""
+        # 1. 取消正在进行的 TTS 生成 + 清空消息队列
         if hasattr(self, 'tts') and hasattr(self.tts, 'flush_talk'):
             self.tts.flush_talk()
+        # 2. 清空 ASR 所有队列 + 重置音频缓冲区
         if hasattr(self, 'asr') and hasattr(self.asr, 'flush_talk'):
             self.asr.flush_talk()
-        self.custom_audiotype = 0  
+        # 3. 清空渲染结果队列（已推理但未发送的帧）
+        while not self.res_frame_queue.empty():
+            try:
+                self.res_frame_queue.get_nowait()
+            except queue.Empty:
+                break
+        # 4. 清空输出层发送队列（WebRTC / VirtualCam 等）
+        if hasattr(self, 'output') and hasattr(self.output, 'flush'):
+            self.output.flush()
+        # 5. 重置状态
+        self.speaking = False
+        self.custom_audiotype = 0
+        logger.info("flush_talk: all pipeline queues drained")
 
     # def flush(self):
     #     self.flush_talk()

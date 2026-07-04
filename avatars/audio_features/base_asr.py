@@ -48,7 +48,31 @@ class BaseASR:
         #self.warm_up()
 
     def flush_talk(self):
+        """深度冲洗：清空所有音频队列 + 重置帧缓冲区"""
         self.queue.queue.clear()
+        # 清空等待推理的特征队列
+        while not self.feat_queue.empty():
+            try:
+                self.feat_queue.get_nowait()
+            except queue.Empty:
+                break
+        # 清空等待输出的音频帧队列
+        while not self.output_queue.empty():
+            try:
+                self.output_queue.get_nowait()
+            except queue.Empty:
+                break
+        # 重置帧缓冲区，避免旧音频残留影响后续推理
+        self.frames.clear()
+        # 预热静音帧，保持推理管线平滑过渡（避免 stride 窗口出现空洞）
+        for _ in range(self.stride_left_size + self.stride_right_size):
+            silence = AudioFrameData(
+                data=np.zeros(self.chunk, dtype=np.float32),
+                type=1,
+                userdata={}
+            )
+            self.frames.append(silence.data)
+            self.output_queue.put(silence)
 
     def put_audio_frame(self,audio_chunk:NDArray[np.float32],datainfo:dict): #16khz 20ms pcm
         self.queue.put(AudioFrameData(data=audio_chunk,type=0,userdata=datainfo))

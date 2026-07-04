@@ -58,7 +58,10 @@ class CosyVoiceTTS(BaseTTS):
         text,textevent = msg
         first = True
         for chunk in audio_stream:
-            if chunk is not None and len(chunk)>0:          
+            if self.is_cancelled():
+                logger.info("cosyvoice TTS cancelled during streaming")
+                return
+            if chunk is not None and len(chunk)>0:
                 stream = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32767
                 stream = resampy.resample(x=stream, sr_orig=24000, sr_new=self.sample_rate)
                 #byte_stream=BytesIO(buffer)
@@ -66,14 +69,18 @@ class CosyVoiceTTS(BaseTTS):
                 streamlen = stream.shape[0]
                 idx=0
                 while streamlen >= self.chunk:
+                    if self.is_cancelled():
+                        logger.info("cosyvoice TTS cancelled during chunking")
+                        return
                     eventpoint={}
                     if first:
                         eventpoint={'status':'start','text':text}
                         first = False
-                    eventpoint.update(**textevent) 
+                    eventpoint.update(**textevent)
                     self.parent.put_audio_frame(stream[idx:idx+self.chunk],eventpoint)
                     streamlen -= self.chunk
                     idx += self.chunk
-        eventpoint={'status':'end','text':text}
-        eventpoint.update(**textevent) 
-        self.parent.put_audio_frame(np.zeros(self.chunk,np.float32),eventpoint) 
+        if not self.is_cancelled():
+            eventpoint={'status':'end','text':text}
+            eventpoint.update(**textevent)
+            self.parent.put_audio_frame(np.zeros(self.chunk,np.float32),eventpoint) 

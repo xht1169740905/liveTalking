@@ -122,6 +122,10 @@ class DoubaoTTS(BaseTTS):
         first = True
         last_stream = np.array([],dtype=np.float32)
         async for chunk in audio_stream:
+            # 检查打断/取消信号，立即停止推送音频到管线
+            if self.is_cancelled():
+                logger.info("doubao TTS cancelled during streaming")
+                return
             if chunk is not None and len(chunk) > 0:
                 stream = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32767
                 stream = np.concatenate((last_stream,stream))
@@ -131,15 +135,20 @@ class DoubaoTTS(BaseTTS):
                 streamlen = stream.shape[0]
                 idx = 0
                 while streamlen >= self.chunk:
+                    # 每个 chunk 前再检查一次取消信号
+                    if self.is_cancelled():
+                        logger.info("doubao TTS cancelled during chunking")
+                        return
                     eventpoint = {}
                     if first:
                         eventpoint={'status':'start','text':text}
                         first = False
-                    eventpoint.update(**textevent) 
+                    eventpoint.update(**textevent)
                     self.parent.put_audio_frame(stream[idx:idx + self.chunk], eventpoint)
                     streamlen -= self.chunk
                     idx += self.chunk
                 last_stream = stream[idx:] #get the remain stream
-        eventpoint={'status':'end','text':text}
-        eventpoint.update(**textevent) 
-        self.parent.put_audio_frame(np.zeros(self.chunk, np.float32), eventpoint)
+        if not self.is_cancelled():
+            eventpoint={'status':'end','text':text}
+            eventpoint.update(**textevent)
+            self.parent.put_audio_frame(np.zeros(self.chunk, np.float32), eventpoint)

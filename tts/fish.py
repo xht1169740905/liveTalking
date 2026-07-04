@@ -68,7 +68,10 @@ class FishTTS(BaseTTS):
         text,textevent = msg
         first = True
         for chunk in audio_stream:
-            if chunk is not None and len(chunk)>0:          
+            if self.is_cancelled():
+                logger.info("fish TTS cancelled during streaming")
+                return
+            if chunk is not None and len(chunk)>0:
                 stream = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32767
                 stream = resampy.resample(x=stream, sr_orig=44100, sr_new=self.sample_rate)
                 #byte_stream=BytesIO(buffer)
@@ -76,6 +79,9 @@ class FishTTS(BaseTTS):
                 streamlen = stream.shape[0]
                 idx=0
                 while streamlen >= self.chunk:
+                    if self.is_cancelled():
+                        logger.info("fish TTS cancelled during chunking")
+                        return
                     eventpoint={}
                     if first:
                         eventpoint={'status':'start','text':text}
@@ -84,6 +90,7 @@ class FishTTS(BaseTTS):
                     self.parent.put_audio_frame(stream[idx:idx+self.chunk],eventpoint)
                     streamlen -= self.chunk
                     idx += self.chunk
-        eventpoint={'status':'end','text':text}
-        eventpoint.update(**textevent) #eventpoint={'status':'end','text':text,'msgevent':textevent}
-        self.parent.put_audio_frame(np.zeros(self.chunk,np.float32),eventpoint)
+        if not self.is_cancelled():
+            eventpoint={'status':'end','text':text}
+            eventpoint.update(**textevent) #eventpoint={'status':'end','text':text,'msgevent':textevent}
+            self.parent.put_audio_frame(np.zeros(self.chunk,np.float32),eventpoint)

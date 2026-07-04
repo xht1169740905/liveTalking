@@ -39,5 +39,13 @@ class WebRTCOutput(BaseOutput):
             return self._player.get_buffer_size()
         return 0
 
+    def flush(self) -> None:
+        """清空 WebRTC 发送队列 — 打断时立即丢弃所有待发送音视频帧"""
+        if self._player:
+            if hasattr(self._player, 'audio') and self._player.audio is not None:
+                self._player.audio.drain()
+            if hasattr(self._player, 'video') and self._player.video is not None:
+                self._player.video.drain()
+
     def stop(self) -> None:
         pass

@@ -151,12 +151,18 @@ class PlayerStreamTrack(MediaStreamTrack):
                 self.totaltime=0
         return frame
     
+    def drain(self):
+        """清空队列中所有待发送帧 — 用于打断时立即停止输出"""
+        while not self._queue.empty():
+            try:
+                item = self._queue.get_nowait()
+                del item
+            except queue.Empty:
+                break
+
     def stop(self):
         super().stop()
-        # Drain & delete remaining frames
-        while not self._queue.empty():
-            item = self._queue.get_nowait()
-            del item
+        self.drain()
         if self._player is not None:
             self._player._stop(self)
             self._player = None

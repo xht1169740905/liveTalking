@@ -28,6 +28,9 @@ class EdgeTTS(BaseTTS):
         streamlen = stream.shape[0]
         idx=0
         while streamlen >= self.chunk and self.state==State.RUNNING:
+            if self.is_cancelled():
+                logger.info("edge TTS cancelled during chunking")
+                break
             eventpoint={}
             streamlen -= self.chunk
             if idx==0:
@@ -65,6 +68,9 @@ class EdgeTTS(BaseTTS):
             #with open(OUTPUT_FILE, "wb") as file:
             first = True
             async for chunk in communicate.stream():
+                if self.is_cancelled():
+                    logger.info("edge TTS cancelled during async streaming")
+                    return
                 if first:
                     first = False
                 if chunk["type"] == "audio" and self.state==State.RUNNING:
