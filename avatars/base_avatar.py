@@ -344,11 +344,14 @@ class BaseAvatar:
     
     def set_custom_state(self, audiotype, reinit=True):
         print('set_custom_state:', audiotype)
-        if self.custom_audio_index.get(audiotype) is None:
+        # 检查是否有自定义视频帧（不要求必须有音频，thinking 就没有音频）
+        if self.custom_index.get(audiotype) is None:
+            logger.warning(f'set_custom_state: audiotype={audiotype} 未加载动作帧，请检查 actions/{audiotype}/ 是否有图片')
             return
         self.custom_audiotype = audiotype
         if reinit:
-            self.custom_audio_index[audiotype] = 0
+            if audiotype in self.custom_audio_index:
+                self.custom_audio_index[audiotype] = 0
             self.custom_index[audiotype] = 0
 
     # ========================== 核心渲染及 Pipeline 桥接 ==========================
