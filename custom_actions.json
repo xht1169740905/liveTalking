@@ -1,0 +1,16 @@
+[
+  {
+    "audiotype": 2,
+    "imgpath": "data/custom/welcome",
+    "audiopath": "data/custom/welcome.wav"
+  },
+  {
+    "audiotype": 3,
+    "imgpath": "data/custom/thinking"
+  },
+  {
+    "audiotype": 4,
+    "imgpath": "data/custom/goodbye",
+    "audiopath": "data/custom/goodbye.wav"
+  }
+]
