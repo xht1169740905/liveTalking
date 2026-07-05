@@ -210,18 +210,46 @@ class BaseAvatar:
         return self.speaking
     
     def __loadcustom(self):
-        if not hasattr(self.opt, 'customopt') or not self.opt.customopt:
-            return
-        for item in self.opt.customopt:
-            logger.info(item)
-            input_img_list = glob.glob(os.path.join(item['imgpath'], '*.[jpJP][pnPN]*[gG]'))
-            input_img_list = sorted(input_img_list, key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
-            self.custom_img_cycle[item['audiotype']] = read_imgs(input_img_list)
-            if item.get('audiopath'):
-                self.custom_audio_cycle[item['audiotype']], sample_rate = sf.read(item['audiopath'], dtype='float32')
-                self.custom_audio_index[item['audiotype']] = 0
-            self.custom_index[item['audiotype']] = 0
-            # self.custom_opt[item['audiotype']] = item
+        # 1. 加载全局 customvideo_config（如果配置了的话）
+        if hasattr(self.opt, 'customopt') and self.opt.customopt:
+            for item in self.opt.customopt:
+                logger.info(item)
+                input_img_list = glob.glob(os.path.join(item['imgpath'], '*.[jpJP][pnPN]*[gG]'))
+                input_img_list = sorted(input_img_list, key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+                self.custom_img_cycle[item['audiotype']] = read_imgs(input_img_list)
+                if item.get('audiopath'):
+                    self.custom_audio_cycle[item['audiotype']], sample_rate = sf.read(item['audiopath'], dtype='float32')
+                    self.custom_audio_index[item['audiotype']] = 0
+                self.custom_index[item['audiotype']] = 0
+
+        # 2. 加载该数字人专属的 actions.json（每个 avatar 独立）
+        avatar_actions_file = os.path.join('data', 'avatars', self.opt.avatar_id, 'actions.json')
+        if os.path.isfile(avatar_actions_file):
+            try:
+                with open(avatar_actions_file, 'r', encoding='utf-8') as f:
+                    actions = json.load(f)
+                for item in actions:
+                    audiotype = item['audiotype']
+                    imgpath = item['imgpath']
+                    # imgpath 支持相对路径（相对于 avatar 目录）
+                    if not os.path.isabs(imgpath):
+                        imgpath = os.path.join('data', 'avatars', self.opt.avatar_id, imgpath)
+                    if os.path.isdir(imgpath):
+                        frames = sorted(glob.glob(os.path.join(imgpath, '*.[jpJP][pnPN]*[gG]')))
+                        frames = sorted(frames, key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+                        if frames:
+                            self.custom_img_cycle[audiotype] = read_imgs(frames)
+                            self.custom_index[audiotype] = 0
+                            logger.info(f"[动作] 加载 avatar={self.opt.avatar_id} audiotype={audiotype} scene={item.get('scene','')} frames={len(frames)}")
+                            audiopath = item.get('audiopath', '')
+                            if audiopath and not os.path.isabs(audiopath):
+                                audiopath = os.path.join('data', 'avatars', self.opt.avatar_id, audiopath)
+                            if audiopath and os.path.isfile(audiopath):
+                                self.custom_audio_cycle[audiotype], sample_rate = sf.read(audiopath, dtype='float32')
+                                self.custom_audio_index[audiotype] = 0
+                                logger.info(f"[动作]   + 音频 {audiopath}")
+            except Exception as e:
+                logger.warning(f"[动作] 加载 {avatar_actions_file} 失败: {e}")
 
     def init_customindex(self):
         self.custom_audiotype = 0
