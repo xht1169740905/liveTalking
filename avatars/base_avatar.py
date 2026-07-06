@@ -344,9 +344,13 @@ class BaseAvatar:
     
     def set_custom_state(self, audiotype, reinit=True):
         print('set_custom_state:', audiotype)
+        # audiotype<=1 → 退出自定义动作模式，切回正常/待机
+        if audiotype <= 1:
+            self.custom_audiotype = audiotype
+            return
         # 检查是否有自定义视频帧（不要求必须有音频，thinking 就没有音频）
         if self.custom_index.get(audiotype) is None:
-            logger.warning(f'set_custom_state: audiotype={audiotype} 未加载动作帧，请检查 actions/{audiotype}/ 是否有图片')
+            logger.warning(f'set_custom_state: audiotype={audiotype} 未加载动作帧，请检查 actions/ 下是否有图片')
             return
         self.custom_audiotype = audiotype
         if reinit:
