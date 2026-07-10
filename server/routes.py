@@ -218,4 +218,11 @@ def setup_routes(app):
     # 注册 avatar 生成相关的路由
     setup_avatar_routes(app)
 
+    # ── Avatar 头像预览 API ──
+    try:
+        from server.avatar_preview import setup_avatar_preview_routes
+        setup_avatar_preview_routes(app)
+    except Exception as e:
+        logger.warning(f"[AvatarPreview] Failed to register avatar preview routes: {e}")
+
     app.router.add_static('/', path='web')

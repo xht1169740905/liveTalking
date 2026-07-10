@@ -1,0 +1,56 @@
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.2.6 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "/home/xht/liveTalking/app.py", line 1, in <module>
+    import torch
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/__init__.py", line 2482, in <module>
+    from torch import (
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/export/__init__.py", line 64, in <module>
+    from .dynamic_shapes import Constraint, Dim, dims, ShapesCollection
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/export/dynamic_shapes.py", line 23, in <module>
+    from .exported_program import ExportedProgram
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/export/exported_program.py", line 26, in <module>
+    from torch._higher_order_ops.utils import autograd_not_implemented
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/_higher_order_ops/__init__.py", line 1, in <module>
+    from torch._higher_order_ops.cond import cond
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/_higher_order_ops/cond.py", line 6, in <module>
+    import torch._subclasses.functional_tensor
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/_subclasses/functional_tensor.py", line 46, in <module>
+    class FunctionalTensor(torch.Tensor):
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/_subclasses/functional_tensor.py", line 295, in FunctionalTensor
+    cpu = _conversion_method_template(device=torch.device("cpu"))
+/home/xht/anaconda3/envs/livetalking/lib/python3.10/site-packages/torch/_subclasses/functional_tensor.py:295: UserWarning: Failed to initialize NumPy: _ARRAY_API not found (Triggered internally at /home/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))
+INFO:utils.logger:Using cuda for inference.
+INFO:utils.logger:Registered avatar/wav2lip: LipReal
+INFO:utils.logger:Namespace(config='config.yaml', fps=25, l=10, m=8, r=10, model='wav2lip', avatar_id='wav2lip256_avatar1', batch_size=16, modelres=192, modelfile='', customvideo_config='', tts='edgetts', REF_FILE='zh-CN-YunxiaNeural', REF_TEXT=None, TTS_SERVER='http://127.0.0.1:9880', transport='webrtc', push_url='http://localhost:1985/rtc/v1/whip/?app=live&stream=livestream', max_session=5, listenport=8010, audio_output_device=None, customopt=[])
+INFO:utils.logger:Load checkpoint from: ./models/wav2lip.pth
+/home/xht/liveTalking/avatars/wav2lip_avatar.py:56: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(checkpoint_path,
+  0%|          | 0/550 [00:00<?, ?it/s] 52%|█████▏    | 284/550 [00:00<00:00, 2838.73it/s]100%|██████████| 550/550 [00:00<00:00, 2612.98it/s]
+  0%|          | 0/550 [00:00<?, ?it/s]100%|██████████| 550/550 [00:00<00:00, 8914.77it/s]
+INFO:utils.logger:warmup model...
+MIOpen(HIP): Error [SearchGcnAssembler] The "/opt/rocm/llvm/bin/clang"is not found. Using /opt/dtk-25.04.2/llvm/bin/clanginstead. Or You Can Specify MIOPEN_ASSIGN_AMDGCN_ASSEMBLER env.
+INFO:utils.logger:[ASR] funasr not installed — local ASR endpoint disabled (pip install funasr modelscope)
+INFO:utils.logger:start http server; http://<serverip>:8010/index.html
+Traceback (most recent call last):
+  File "/home/xht/liveTalking/app.py", line 240, in <module>
+    main()
+  File "/home/xht/liveTalking/app.py", line 225, in main
+    run_server(web.AppRunner(appasync))
+  File "/home/xht/liveTalking/app.py", line 223, in run_server
+    loop.run_forever()
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/asyncio/base_events.py", line 603, in run_forever
+    self._run_once()
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/asyncio/base_events.py", line 1871, in _run_once
+    event_list = self._selector.select(timeout)
+  File "/home/xht/anaconda3/envs/livetalking/lib/python3.10/selectors.py", line 469, in select
+    fd_event_list = self._selector.poll(timeout, max_ev)
+KeyboardInterrupt

@@ -6,6 +6,7 @@ import cv2
 import math
 
 import torch
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 import torchvision
 from .detect_face import SCRFD
 # from models.pfld_lite import PFLDInference
@@ -97,7 +98,7 @@ class Landmark:
         input = np.asarray(input, dtype=np.float32) / 255.0
         input = input.transpose(2,0,1)
         input = torch.from_numpy(input)[None]
-        input = input.cuda()
+        
         # print(input)
         # asd
 

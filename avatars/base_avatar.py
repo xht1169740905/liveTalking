@@ -47,6 +47,8 @@ from fractions import Fraction
 
 from utils.logger import logger
 from utils.image import read_imgs,mirror_index
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # class State(Enum):
 #     INIT=0
@@ -333,54 +335,26 @@ class BaseAvatar:
             except queue.Empty:
                 continue
                 
-            is_all_silence = True
             audio_frames: list[AudioFrameData] = []
             for _ in range(self.batch_size * 2):
                 audioframe:AudioFrameData = self.asr.output_queue.get()
-                if audioframe.type == 0:
-                    is_all_silence = False               
                 audio_frames.append(audioframe)
 
-             # 检测状态变化
-            current_speaking = not is_all_silence
+            t = time.perf_counter()
+            pred = self.inference_batch(index, audiofeat_batch)
 
-            if is_all_silence: #全为静音数据，只需要取fullimg，不需要推理
-                for i in range(self.batch_size):
-                    idx = mirror_index(length, index)
-                    self.res_frame_queue.put((None, audio_frames[i*2:i*2+2], idx))
-                    index = index + 1
-            else:
-                if current_speaking and not last_speaking and self.custom_index.get(1) is not None: #从静音到说话切换,并且有自定义静态视频
-                    index = 0
-                t = time.perf_counter()
-
-                pred = self.inference_batch(index, audiofeat_batch)
-
-                counttime += (time.perf_counter() - t)
-                count += self.batch_size
-                if count >= 100:
-                    logger.info(f"------actual avg infer fps:{count/counttime:.4f}")
-                    count = 0
-                    counttime = 0
-                for i, res_frame in enumerate(pred):
-                    self.res_frame_queue.put((res_frame, audio_frames[i*2:i*2+2], mirror_index(length, index)))
-                    index = index + 1
-                    
-            if current_speaking != last_speaking:
-                logger.info(f"inference 状态切换：{'说话' if last_speaking else '静音'} → {'说话' if current_speaking else '静音'}")
-                last_speaking = current_speaking         
+            counttime += (time.perf_counter() - t)
+            count += self.batch_size
+            if count >= 100:
+                logger.info(f"------actual avg infer fps:{count/counttime:.4f}")
+                count = 0
+                counttime = 0
+            for i, res_frame in enumerate(pred):
+                self.res_frame_queue.put((res_frame, audio_frames[i*2:i*2+2], mirror_index(length, index)))
+                index = index + 1         
         logger.info('baseavatar inference thread stop')
 
     def process_frames(self,quit_event):
-        enable_transition = False  # 设置为False禁用过渡效果，True启用
-        
-        _last_speaking = False
-        _transition_start = time.time()
-        if enable_transition:
-            _transition_duration = 0.1  # 过渡时间
-            _last_silent_frame = None  # 静音帧缓存
-            _last_speaking_frame = None  # 说话帧缓存
-
         self.output.start()
         
         while not quit_event.is_set():
@@ -390,52 +364,12 @@ class BaseAvatar:
             except queue.Empty:
                 continue
             
-            # 检测状态变化
-            current_speaking = not (audio_frames[0].type!=0 and audio_frames[1].type!=0)
-            if current_speaking != _last_speaking:
-                logger.info(f"状态切换：{'说话' if _last_speaking else '静音'} → {'说话' if current_speaking else '静音'}")
-                _transition_start = time.time()
-            _last_speaking = current_speaking
-
-            if audio_frames[0].type!=0 and audio_frames[1].type!=0: #全为静音数据，只需要取fullimg
-                self.speaking = False
-                audiotype = audio_frames[0].type
-                if self.custom_index.get(audiotype) is not None: #有自定义视频
-                    mirindex = mirror_index(len(self.custom_img_cycle[audiotype]),self.custom_index[audiotype])
-                    target_frame = self.custom_img_cycle[audiotype][mirindex]
-                    self.custom_index[audiotype] += 1
-                else:
-                    target_frame = self.frame_list_cycle[idx]
-                
-                if enable_transition:
-                    # 说话→静音过渡
-                    if time.time() - _transition_start < _transition_duration and _last_speaking_frame is not None:
-                        alpha = min(1.0, (time.time() - _transition_start) / _transition_duration)
-                        combine_frame = cv2.addWeighted(_last_speaking_frame, 1-alpha, target_frame, alpha, 0)
-                    else:
-                        combine_frame = target_frame
-                    # 缓存静音帧
-                    _last_silent_frame = combine_frame.copy()
-                else:
-                    combine_frame = target_frame
-            else:
-                self.speaking = True
-                try:
-                    current_frame = self.paste_back_frame(res_frame,idx)
-                except Exception as e:
-                    logger.warning(f"paste_back_frame error: {e}")
-                    continue
-                if enable_transition:
-                    # 静音→说话过渡
-                    if time.time() - _transition_start < _transition_duration and _last_silent_frame is not None:
-                        alpha = min(1.0, (time.time() - _transition_start) / _transition_duration)
-                        combine_frame = cv2.addWeighted(_last_silent_frame, 1-alpha, current_frame, alpha, 0)
-                    else:
-                        combine_frame = current_frame
-                    # 缓存说话帧
-                    _last_speaking_frame = combine_frame.copy()
-                else:
-                    combine_frame = current_frame
+            self.speaking = True
+            try:
+                combine_frame = self.paste_back_frame(res_frame, idx)
+            except Exception as e:
+                logger.warning(f"paste_back_frame error: {e}")
+                continue
 
             cv2.putText(combine_frame, "LiveTalking", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (128,128,128), 1)
             
@@ -463,7 +397,7 @@ class BaseAvatar:
         self.init_customindex()
         self.tts.render(quit_event)
 
-        infer_quit_event = mp.Event()
+        infer_quit_event = Event()
         infer_thread = Thread(target=self.inference, args=(infer_quit_event,))
         infer_thread.start()
         

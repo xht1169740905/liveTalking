@@ -261,10 +261,11 @@ function negotiate() {
         });
     }).then(() => {
         const offer = pc.localDescription;
+        const avatarInput = document.getElementById('offerAvatar').value.trim();
         const body = {
             sdp: offer.sdp,
             type: offer.type,
-            avatar: document.getElementById('offerAvatar').value || undefined,
+            avatar: avatarInput || undefined,
             refaudio: document.getElementById('offerRefAudio').value || undefined,
             reftext: document.getElementById('offerRefText').value || undefined,
         };

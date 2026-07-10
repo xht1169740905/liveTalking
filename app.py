@@ -1,4 +1,5 @@
-###############################################################################
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")###############################################################################
 #  Copyright (C) 2024 LiveTalking@lipku https://github.com/lipku/LiveTalking
 #  email: lipku@foxmail.com
 # 
@@ -73,14 +74,22 @@ def randN(N)->int:
     max = pow(10, N)
     return random.randint(min, max - 1)
 
-def build_avatar_session(sessionid:str, params:dict)->BaseAvatar:
+def build_avatar_session(sessionid: str, params: dict) -> BaseAvatar:
     opt_this = copy.deepcopy(opt)
     opt_this.sessionid = sessionid
 
-    avatar_id = params.get('avatar',opt.avatar_id) 
+    avatar_id = params.get('avatar')
+    # 优先使用默认 avatar，仅当请求中的 avatar_id 实际存在时才切换
+    if avatar_id and avatar_id != opt.avatar_id:
+        avatar_path = f"./data/avatars/{avatar_id}"
+        if not os.path.isdir(avatar_path) or not os.path.exists(f"{avatar_path}/coords.pkl"):
+            logger.warning("Requested avatar '%s' not found, falling back to default '%s'", avatar_id, opt.avatar_id)
+            avatar_id = opt.avatar_id
+    else:
+        avatar_id = opt.avatar_id
     opt_this.avatar_id = avatar_id
-    ref_audio = params.get('refaudio','') #音色
-    ref_text = params.get('reftext','')
+    ref_audio = params.get('refaudio', '') #音色
+    ref_text = params.get('reftext', '')
     if (avatar_id and avatar_id != opt.avatar_id):
         # Avoid reloading if already cached globally
         if avatar_id not in global_avatars:

@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import torch
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 import math
 import numpy as np
 import cv2
